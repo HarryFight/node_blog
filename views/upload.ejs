@@ -1,0 +1,11 @@
+<%- include header %>
+<form method='post' action='/upload' enctype='multipart/form-data' >
+    <input type="file" name='file1'/><br>
+    <input type="file" name='file2'/><br>
+    <input type="file" name='file3'/><br>
+    <input type="file" name='file4'/><br>
+    <input type="file" name='file5'/><br>
+    <input type="submit" />
+</form>
+<img src="http://i2.tietuku.com/674a895eaa333a88.png" alt ="tietuku.com" style ="cursor:pointer" onclick="tietuku_upload()"/><script language = "javascript" type = "text/javascript"  src="http://static.tietuku.com/static/open/tietuku.jquery.min.js"></script><script language = "javascript" type = "text/javascript"  src="http://static.tietuku.com/static/open/tietuku.dialog.js"></script><script>var token="1NbhtIS38TyiN2adp7LuS05w8CEgpFfu5XEHnvaW:wIpl8K4m0tOky3s1G5MgQ2poI-4=:eyJkZWFkbGluZSI6MTQzOTYwNzQ4MiwidWlkIjowLCJhbGJ1bSI6MH0=";var jq=jQuery.noConflict();function tietuku_upload(){jq.dialog.showIframeDialog(850, '', '<iframe frameborder="0" width="824" height="450" marginheight="0" marginwidth="0"  src="http://static.tietuku.com/upByPlugn?token='+token+'&ifr=1&"></iframe>');}var $=jQuery.noConflict();</script>
+<%- include footer %>
