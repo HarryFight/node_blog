@@ -173,21 +173,20 @@ module.exports = function(app){
                 req.flash('error', '用户不存在');
                 return res.redirect('/');   //跳转到主页
             }
-            console.log('user');
             //查询并返回该用户的所有文章
             Post.getAll(user.name, function (err, posts) {
                 if (err) {
                     req.flash('error', err);
                     return res.redirect('/')
                 }
-            });
-            //使用查询到的数据渲染user模版
-            res.render('user',{
-                title:user.name,
-                posts:posts,
-                user:req.session.user,
-                success:req.flash('success').toString(),
-                error:req.flash('error').toString()
+                //使用查询到的数据渲染user模版
+                res.render('user', {
+                    title: user.name,
+                    posts: posts,
+                    user: req.session.user,
+                    success: req.flash('success').toString(),
+                    error: req.flash('error').toString()
+                })
             })
         })
     });
@@ -210,6 +209,53 @@ module.exports = function(app){
        })
     });
 
+    //编辑文章页面
+    app.get('/edit/:name/:day/:title', checkLogin);     //检测是否登录
+    app.get('/edit/:name/:day/:title', function (req, res) {
+        var currentUser = req.session.user;
+        Post.edit(currentUser.name, req.params.day, req.params.title, function (err, post) {
+            if (err) {
+                req.flash('error', err);
+                return res.redirect('back');
+            }
+            res.render('edit', {
+                title: '编辑',
+                post: post,
+                user: req.session.user,
+                success: req.flash('success').toString(),
+                error: req.flash('error').toString()
+            });
+        });
+    });
+    //发送编辑后的文章
+    app.post('/edit/:name/:day/:title', checkLogin);
+    app.post('/edit/:name/:day/:title', function (req, res) {
+        var currentUser = req.session.user;
+        Post.update(currentUser.name, req.params.day, req.params.title, req.body.post, function (err) {
+            //该原生方法的目的是对 URI 进行完整的编码
+            var url = encodeURI('/u/' + req.params.name + '/' + req.params.day + '/' + req.params.title);
+            if (err) {
+                req.flash('error', err);
+                return res.redirect(url);//出错！返回文章页
+            }
+            req.flash('success', '修改成功!');
+            res.redirect(url);//成功！返回文章页
+        });
+    });
+    //删除文章页面
+    app.get('/remove/:name/:day/:title', checkLogin);
+    app.get('/remove/:name/:day/:title', function (req, res) {
+        var currentUser = req.session.user;
+        //传如相应数据删除文章
+        Post.remove(currentUser.name, req.params.day, req.params.title, function (err) {
+            if (err) {
+                req.flash('error', err);
+                return res.redirect('back');
+            }
+            req.flash('success', '删除成功!');
+            res.redirect('/');
+        });
+    });
     /**
      * 判断是否登录
      * @param req
@@ -221,6 +267,7 @@ module.exports = function(app){
             req.flash('error','未登录！');
             req.redirect('/login');
         }
+        //next函数是传递控制权
         next();
     }
     /**
@@ -234,6 +281,7 @@ module.exports = function(app){
             req.flash('error','已登录');
             req.redirect('back');
         }
+        //next函数是传递控制权
         next();
     }
 };
