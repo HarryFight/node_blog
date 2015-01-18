@@ -31,7 +31,8 @@ Post.prototype.save = function(callback) {
         name: this.name,
         time: time,
         title: this.title,
-        post: this.post
+        post: this.post,
+        comments:[]     //  评论数组
     };
     //打开数据库
     mongodb.open(function (err, db) {
@@ -84,7 +85,7 @@ Post.getAll = function(name, callback) {
                 if (err) {
                     return callback(err);//失败！返回 err
                 }
-                //将doc里面的markdown解析为html
+                //遍历所有文章并解析markdown
                 docs.forEach(function(doc){
                    doc.post = markdown.toHTML(doc.post);
                 });
@@ -118,7 +119,13 @@ Post.getOne = function(name,day,title,callback){
                     return callback(err);
                 }
                 //解析markdown为html
-                doc.post = markdown.toHTML(doc.post);
+                if(doc){
+                    doc.post = markdown.toHTML(doc.post);
+                    //遍历整个数组解析每一个comment数据对象中的content
+                    doc.comments.forEach(function(comment){
+                        comment.content = markdown.toHTML(comment.content);
+                    });
+                }
                 callback(null,doc); //向回调函数传送查询到的文章内容
             })
 

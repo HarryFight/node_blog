@@ -1,10 +1,11 @@
 var express = require('express');
 var router = express.Router();
 
-//引入 crypto 模块和 user.js 用户模型文件，crypto 是 Node.js 的一个核心模块，我们用它生成散列值来加密密码。
+//引入 crypto 模块，crypto 是 Node.js 的一个核心模块，我们用它生成散列值来加密密码。
 var crypto = require('crypto'),
     User = require('../models/user.js'),
-    Post = require('../models/post.js');
+    Post = require('../models/post.js'),
+    Comment = require('../models/comment.js');
 
 /* 路由控制 */
 module.exports = function(app){
@@ -208,7 +209,30 @@ module.exports = function(app){
            });
        })
     });
-
+    //注册留言的post响应
+    app.post('/u/:name/:day/:title', function (req, res) {
+        var date = new Date(),
+            time = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + " " +
+                date.getHours() + ":" + (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes());
+        //将请求数据保存在comment json对象中
+        var comment = {
+            name: req.body.name,
+            email: req.body.email,
+            website: req.body.website,
+            time: time,
+            content: req.body.content
+        };
+        var newComment = new Comment(req.params.name, req.params.day, req.params.title, comment);
+        newComment.save(function (err) {
+            if (err) {
+                req.flash('error', err);
+                return res.redirect('back');
+            }
+            req.flash('success', '留言成功!');
+            //如果成功返之前页（文章页）
+            res.redirect('back');
+        });
+    });
     //编辑文章页面
     app.get('/edit/:name/:day/:title', checkLogin);     //检测是否登录
     app.get('/edit/:name/:day/:title', function (req, res) {
@@ -216,6 +240,7 @@ module.exports = function(app){
         Post.edit(currentUser.name, req.params.day, req.params.title, function (err, post) {
             if (err) {
                 req.flash('error', err);
+                //成功后返回前一页
                 return res.redirect('back');
             }
             res.render('edit', {
