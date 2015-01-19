@@ -11,16 +11,20 @@ var crypto = require('crypto'),
 module.exports = function(app){
     //获取主页
     app.get('/', function (req, res) {
-        //获取所有文章内容
-        Post.getAll(null,function(err,docs) {
+        //判断是否是第一页，并把请求的页数转换成 number 类型
+        var page = req.query.p ? parseInt(req.query.p) : 1;
+        //查询并返回第 page 页的 10 篇文章
+        Post.getTen(null, page, function (err, posts, total) {
             if (err) {
-                posts = [];     //数据库查询错误，post置为空
+                posts = [];
             }
-            //使用模板渲染，并且传入相应参数。
             res.render('index', {
                 title: '主页',
+                posts: posts,
+                page: page,
+                isFirstPage: (page - 1) == 0,
+                isLastPage: ((page - 1) * 10 + posts.length) == total,
                 user: req.session.user,
-                posts: docs,
                 success: req.flash('success').toString(),
                 error: req.flash('error').toString()
             });
@@ -129,7 +133,8 @@ module.exports = function(app){
     app.post('/post', checkLogin);
     app.post('/post', function (req, res) {
         var currentUser = req.session.user,
-            post = new Post(currentUser.name,req.body.title,req.body.post);
+            tags = [req.body.tag1, req.body.tag2, req.body.tag3],
+            post = new Post(currentUser.name,req.body.title,tags,req.body.post);
         post.save(function(err){
             if(err){
                 req.flash('error',err);
@@ -170,25 +175,29 @@ module.exports = function(app){
     app.get('/u/:name',function(req,res){
         //检查用户是否存在
         User.get(req.params.name,function(err,user) {
+            //获取page值,请求中包含p，则使用请求页码，否则使用第一页
+            var page = req.query.p ? parseInt(req.query.p) : 1;
             if (!user) {
                 req.flash('error', '用户不存在');
                 return res.redirect('/');   //跳转到主页
             }
-            //查询并返回该用户的所有文章
-            Post.getAll(user.name, function (err, posts) {
+            //查询并返回该用户第 page 页的 10 篇文章
+            Post.getTen(user.name, page, function (err, posts, total) {
                 if (err) {
                     req.flash('error', err);
-                    return res.redirect('/')
+                    return res.redirect('/');
                 }
-                //使用查询到的数据渲染user模版
                 res.render('user', {
                     title: user.name,
                     posts: posts,
+                    page: page,
+                    isFirstPage: (page - 1) == 0,
+                    isLastPage: ((page - 1) * 10 + posts.length) == total,
                     user: req.session.user,
                     success: req.flash('success').toString(),
                     error: req.flash('error').toString()
-                })
-            })
+                });
+            });
         })
     });
     //文章页面
@@ -281,12 +290,81 @@ module.exports = function(app){
             res.redirect('/');
         });
     });
+    //获取存档页
+    app.get('/archive', function (req, res) {
+        Post.getArchive(function (err, posts) {
+            if (err) {
+                req.flash('error', err);
+                return res.redirect('/');
+            }
+            res.render('archive', {
+                title: '存档',
+                posts: posts,
+                user: req.session.user,
+                success: req.flash('success').toString(),
+                error: req.flash('error').toString()
+            });
+        });
+    });
+    //获取标签页
+    app.get('/tags', function (req, res) {
+        Post.getTags(function (err, posts) {
+            if (err) {
+                req.flash('error', err);
+                return res.redirect('/');
+            }
+            res.render('tags', {
+                title: '标签',
+                posts: posts,
+                user: req.session.user,
+                success: req.flash('success').toString(),
+                error: req.flash('error').toString()
+            });
+        });
+    });
+    //获取单个标签包含的文章
+    app.get('/tags/:tag', function (req, res) {
+        Post.getTag(req.params.tag, function (err, posts) {
+            if (err) {
+                req.flash('error',err);
+                return res.redirect('/');
+            }
+            res.render('tag', {
+                title: 'TAG:' + req.params.tag,
+                posts: posts,
+                user: req.session.user,
+                success: req.flash('success').toString(),
+                error: req.flash('error').toString()
+            });
+        });
+    });
+    //根据关键字查询文章
+    app.get('/search', function (req, res) {
+        Post.search(req.query.keyword, function (err, posts) {
+            if (err) {
+                req.flash('error', err);
+                return res.redirect('/');
+            }
+            res.render('search', {
+                title: "SEARCH:" + req.query.keyword,
+                posts: posts,
+                user: req.session.user,
+                success: req.flash('success').toString(),
+                error: req.flash('error').toString()
+            });
+        });
+    });
     /**
      * 判断是否登录
      * @param req
      * @param res
      * @param next
      */
+    //当所有的路由都无法匹配的时候加载404页面
+    app.use(function (req, res) {
+        res.render("404");
+    });
+
     function checkLogin(req,res,next){
         if(!req.session.user){
             req.flash('error','未登录！');

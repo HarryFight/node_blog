@@ -14,6 +14,10 @@ var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
 var multer = require('multer');
 
+var fs = require('fs');
+var accessLog = fs.createWriteStream('access.log',{flags:'a'}),
+    errorLog = fs.createWriteStream('error.log',{flags:'a'});
+
 var app = express();
 
 // view engine setup
@@ -32,8 +36,18 @@ app.use(multer({
 }));
 
 //使用网站图标
-//app.use(favicon(__dirname + '/public/favicon.ico'));
+app.use(favicon(__dirname + '/public/xiangyifight.ico'));
+
+//使用记录日志功能的中间件
 app.use(logger('dev'));
+app.use(logger({stream:accessLog}));
+//自行辨析记录错误日志功能
+app.use(function(err,req,res,next){
+    var meta = '['+new Date()+']'+req.url+'\n';
+    errorLog.write(meta+err.stack+'\n');
+    next();
+});
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
